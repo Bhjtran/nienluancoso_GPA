@@ -119,7 +119,23 @@ function tinhGPAChuan($mssv) {
     return ($tong_tc > 0) ? round($tong_diem / $tong_tc, 2) : 0;
 }
 
+function tinhTinChiThucTap($mssv) {
+    global $conn;
 
+    $sql = "
+        SELECT SUM(m.so_tc) AS tong_tc
+        FROM v_bang_diem_max v
+        JOIN mon_hoc m ON v.ma_hp = m.ma_hp
+        WHERE v.mssv = '$mssv'
+          AND v.diem_4_max >= 1.0
+          AND m.loai_hp != 'DieuKien'
+    ";
+
+    $res = mysqli_query($conn, $sql);
+    $row = mysqli_fetch_assoc($res);
+
+    return (int)($row['tong_tc'] ?? 0);
+}
 function convertDiemSoSangChu($diem4) {
     if ($diem4 >= 4.0) return "A";
     if ($diem4 >= 3.5) return "B+";
@@ -358,6 +374,7 @@ function convertDiemSoSangChu($diem4) {
 
         <div class="col-lg-4">
             <div class="gpa-card mb-4 shadow-sm">
+
                 <?php $gpa = tinhGPAChuan($mssv); ?>
                 <p class="small text-uppercase mb-1 fw-bold opacity-75">GPA TÍCH LŨY</p>
                 <div class="gpa-val"><?php echo $gpa; ?></div>
@@ -367,9 +384,29 @@ function convertDiemSoSangChu($diem4) {
                     ?>
                 </p>
             </div>
+            <?php
+$tong_tc_thuctap = tinhTinChiThucTap($mssv);
+$dat_thuctap = $tong_tc_thuctap >= 120;
+?>
 
-            <div class="card p-4 shadow-sm">
-                <h6 class="fw-bold mb-3 text-dark border-bottom pb-2">ĐIỀU KIỆN TỐT NGHIỆP</h6>
+<div class="card p-3 shadow-sm">
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#totnghiep">
+                Điều kiện tốt nghiệp
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#thuctap">
+                Điều kiện thực tập
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- TAB TỐT NGHIỆP -->
+        <div class="tab-pane fade show active" id="totnghiep">
                 <?php
                                     // --- LOGIC KIỂM TRA THEO QUY CHẾ 3266/QĐ-ĐHCT ---
 
@@ -469,7 +506,36 @@ function convertDiemSoSangChu($diem4) {
                         <div class="alert alert-danger border-0 py-2 small fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>CHƯA ĐỦ ĐIỀU KIỆN TỐT NGHIỆP</div>
                     <?php endif; ?>
                 </div>
+        </div>
+
+        <!-- TAB THỰC TẬP -->
+        <div class="tab-pane fade" id="thuctap">
+            <p class="fw-bold mb-1">Tín chỉ tích lũy</p>
+
+            <div class="progress mb-2" style="height: 10px;">
+                <div class="progress-bar bg-primary"
+                     style="width: <?php echo min(100, $tong_tc_thuctap / 120 * 100); ?>%">
+                </div>
             </div>
+
+            <p class="small mb-2">
+                <?php echo $tong_tc_thuctap; ?> / 120 tín chỉ
+            </p>
+
+            <?php if ($dat_thuctap): ?>
+                <div class="alert alert-success mb-0">
+                    ✅ ĐỦ ĐIỀU KIỆN THỰC TẬP
+                </div>
+            <?php else: ?>
+                <div class="alert alert-warning mb-0">
+                    ⏳ Còn thiếu <?php echo 120 - $tong_tc_thuctap; ?> tín chỉ để được thực tập
+                </div>
+            <?php endif; ?>
+        </div>
+
+    </div>
+</div>
+
         </div>
     </div>
 </div>
