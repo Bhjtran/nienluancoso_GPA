@@ -79,7 +79,7 @@ if(isset($_POST['btn_save'])){
         INSERT INTO bang_diem(mssv, ma_hp, diem_4, diem_10)
         VALUES ('$mssv','$ma','$d4',".($diem10===null?"NULL":$diem10).")
     ");
-
+$_SESSION['mon_moi_vua_them'] = strtoupper($ma);
     header("Location: index.php");
     exit();
 }
@@ -196,6 +196,16 @@ function convertDiemSoSangChu($diem4) {
         .gpa-val { font-size: 5rem; font-weight: 800; line-height: 1; }
         .table thead th { font-weight: 800; color: #555; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #f4f6f9; }
         .badge-loai { font-size: 0.75rem; padding: 5px 10px; border-radius: 20px; }
+        @keyframes flashRow {
+            0%   { background-color: #fff3cd; }
+            50%  { background-color: #ffe69c; }
+            100% { background-color: transparent; }
+        }
+
+        /* ÁP DỤNG CHO TẤT CẢ TD TRONG HÀNG */
+        .row-new > td {
+            animation: flashRow 1.2s ease-in-out 3;
+        }
     </style>
 </head>
 <body>
@@ -223,6 +233,37 @@ function convertDiemSoSangChu($diem4) {
 <div class="container pb-5">
     <div class="card p-4 mb-4">
         <h6 class="fw-bold text-primary mb-3"><i class="fas fa-plus-circle me-2"></i>CẬP NHẬT ĐIỂM MỚI</h6>
+        <div class="mb-3">
+    <button class="btn btn-outline-primary btn-sm"
+            data-bs-toggle="collapse"
+            data-bs-target="#importBox">
+        <i class="fas fa-file-upload me-1"></i>
+        Quét bảng điểm từ file
+    </button>
+</div>
+
+<div class="collapse" id="importBox">
+    <div class="border rounded p-3 bg-light">
+        <form method="POST" action="import_file.php" enctype="multipart/form-data">
+            <div class="mb-2 small fw-bold">Chọn file bảng điểm:</div>
+
+            <input type="file"
+                   name="bangdiem"
+                   class="form-control mb-2"
+                   accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.csv,.doc,.docx"
+                   required>
+
+            <button class="btn btn-success btn-sm">
+                <i class="fas fa-search me-1"></i> Quét & trích xuất
+            </button>
+
+            <div class="small text-muted mt-2">
+                Hỗ trợ: Ảnh, PDF, Excel, Word (không cần đúng định dạng)
+            </div>
+        </form>
+    </div>
+</div>
+        
         <form method="POST" class="row g-2">
             <div class="col-md-2"><input type="text" name="ma_hp" class="form-control" placeholder="Mã HP" required></div>
             <div class="col-md-4"><input type="text" name="ten_hp" class="form-control" placeholder="Tên môn học" required></div>
@@ -271,6 +312,8 @@ function convertDiemSoSangChu($diem4) {
         </div>
     </div>
 
+    
+
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card p-4 h-100">
@@ -309,8 +352,17 @@ function convertDiemSoSangChu($diem4) {
 
                                 ?>
                                 
-                                <tr>
-                                    <td class="fw-bold text-secondary"><?php echo $row['ma_hp']; ?></td>
+                                  <tr
+                                        <?php
+                                        if (
+                                            isset($_SESSION['mon_moi_vua_them']) &&
+                                            strtoupper($row['ma_hp']) === $_SESSION['mon_moi_vua_them']
+                                        ) {
+                                            echo "class='row-new'";
+                                        }
+                                        ?>
+                                        >
+                                                                       <td class="fw-bold text-secondary"><?php echo $row['ma_hp']; ?></td>
                                     <td class='fw-bold text-dark'><?php echo $row['ten_hp']; ?></td>                                    <td class='text-center'><?php echo $row['so_tc']; ?></td>
                                     <td class='text-center'><span class='badge bg-light text-dark border badge-loai'><?php echo ($row['loai_hp']=='DieuKien'?'Điều kiện':'Chuyên ngành'); ?></span></td>
                                     <td class='text-center fw-bold'>
@@ -396,7 +448,11 @@ function convertDiemSoSangChu($diem4) {
                                 </div>
                                 <?php
                             }
+                            
                             ?>
+                            <?php
+unset($_SESSION['mon_moi_vua_them']);
+?>
                         </tbody>
                     </table>
                 </div>
@@ -597,6 +653,12 @@ document.querySelector("input[name='ma_hp']").addEventListener("input", function
         diem10.required = false;
         diem10.value = "";
     }
+});
+
+//scroll
+document.querySelector('.row-new')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
 });
 </script>
 
