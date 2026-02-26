@@ -102,7 +102,7 @@ function tinhGPAChuan($mssv) {
         FROM v_bang_diem_max v
         JOIN mon_hoc m ON v.ma_hp = m.ma_hp
        WHERE v.mssv = '$mssv'
-        AND v.diem_4_max >= 1.0
+        AND v.diem_4_max >= 0.0
         AND m.loai_hp != 'DieuKien'
         AND v.ma_hp NOT LIKE 'QP%'
 
@@ -135,6 +135,36 @@ function tinhTinChiThucTap($mssv) {
     $row = mysqli_fetch_assoc($res);
 
     return (int)($row['tong_tc'] ?? 0);
+}
+function renderTinChiBox($hien_tai, $yeu_cau, $label) {
+    $phan_tram = min(100, ($hien_tai / $yeu_cau) * 100);
+    $dat = $hien_tai >= $yeu_cau;
+    ?>
+
+    <div class="mb-3 small">
+        <div class="d-flex justify-content-between">
+            <b><?php echo $label; ?></b>
+            <span><?php echo $hien_tai; ?>/<?php echo $yeu_cau; ?></span>
+        </div>
+
+        <div class="progress mt-1" style="height:8px;">
+            <div class="progress-bar bg-success"
+                 style="width: <?php echo $phan_tram; ?>%">
+            </div>
+        </div>
+    </div>
+                <div class="text-center mt-3">
+    <?php if ($dat): ?>
+        <div class="alert alert-success py-2 small fw-bold">
+            <i class="fas fa-check-circle me-2"></i>
+            ĐỦ ĐIỀU KIỆN <?php echo strtoupper($label); ?>
+        </div>
+    <?php else: ?>
+        <div class="alert alert-danger border-0 py-2 small fw-bold">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            CÒN THIẾU <?php echo $yeu_cau - $hien_tai; ?> TÍN CHỈ
+        </div>
+    <?php endif;
 }
 function convertDiemSoSangChu($diem4) {
     if ($diem4 >= 4.0) return "A";
@@ -237,7 +267,7 @@ function convertDiemSoSangChu($diem4) {
             <div class="col-md-2"><button name="btn_save" class="btn btn-save w-100 h-100">Lưu dữ liệu</button></div>
         </form>
         <div class="mt-3 small text-muted">
-            <i class="fas fa-info-circle me-1 text-primary"></i> <strong>Lưu ý:</strong> "Anh văn", "Quốc phòng", "Thể dục" chọn <b>"Điều kiện"</b>. Các môn khác chọn <b>"Chuyên ngành"</b>.
+            <i class="fas fa-info-circle me-1 text-primary"></i> <strong>Lưu ý:</strong> "Anh văn", "Quốc phòng", "Thể chất" chọn <b>"Điều kiện"</b>. Các môn khác chọn <b>"Chuyên ngành"</b>.
         </div>
     </div>
 
@@ -249,7 +279,8 @@ function convertDiemSoSangChu($diem4) {
                     <table class="table align-middle">
                         <thead>
                             <tr>
-                                <th>Môn học</th>
+                                    <th class="text-center">Mã HP</th>
+                                    <th class="text-center">Môn học</th>
                                 <th class="text-center">Tín chỉ</th>
                                 <th class="text-center">Phân loại</th>
                                 <th class="text-center">Hệ 4</th>
@@ -279,8 +310,8 @@ function convertDiemSoSangChu($diem4) {
                                 ?>
                                 
                                 <tr>
-                                    <td class='fw-bold text-dark'><?php echo $row['ten_hp']; ?></td>
-                                    <td class='text-center'><?php echo $row['so_tc']; ?></td>
+                                    <td class="fw-bold text-secondary"><?php echo $row['ma_hp']; ?></td>
+                                    <td class='fw-bold text-dark'><?php echo $row['ten_hp']; ?></td>                                    <td class='text-center'><?php echo $row['so_tc']; ?></td>
                                     <td class='text-center'><span class='badge bg-light text-dark border badge-loai'><?php echo ($row['loai_hp']=='DieuKien'?'Điều kiện':'Chuyên ngành'); ?></span></td>
                                     <td class='text-center fw-bold'>
                                         <span class="text-primary" style="font-size: 1.2rem;">
@@ -424,6 +455,19 @@ $dat_thuctap = $tong_tc_thuctap >= 120;
                 $gpa = tinhGPAChuan($mssv); 
                 $check_gpa_tot_nghiep = ($gpa >= 2.0); // Điều 32, mục 1a
 
+                                // Đếm số môn F (chỉ tính môn chuyên ngành)
+                $res_f = mysqli_query($conn, "
+                    SELECT COUNT(*) AS so_mon_f
+                    FROM v_bang_diem_max v
+                    JOIN mon_hoc m ON v.ma_hp = m.ma_hp
+                    WHERE v.mssv = '$mssv'
+                    AND m.loai_hp != 'DieuKien'
+                    AND v.diem_4_max = 0
+                ");
+                $so_mon_f = mysqli_fetch_assoc($res_f)['so_mon_f'] ?? 0;
+
+                $check_khong_f = ($so_mon_f == 0);
+
                 // 2. Kiểm tra khối GDQP&AN (Phải đạt từ 5.0 trở lên hệ 10)
                 $res_qp = mysqli_query($conn, "
                     SELECT 
@@ -473,20 +517,34 @@ $dat_thuctap = $tong_tc_thuctap >= 120;
                 </div>
 
                 <div class="mb-3 small">
-                    <b>2. Điểm sàn (GPA >= 2.0):</b>
+                    <b>2. Môn điểm F:</b>
+                    <div class="mt-1 p-2 border rounded fw-bold 
+                        <?php echo $check_khong_f ? 'text-success' : 'text-danger'; ?>">
+                        <i class="fas <?php echo $check_khong_f ? 'fa-check-circle' : 'fa-times-circle'; ?> me-2"></i>
+                        <?php
+                            echo $check_khong_f
+                                ? "Không có môn F"
+                                : "Có $so_mon_f môn F";
+                        ?>
+                    </div>
+                </div>
+
+                <div class="mb-3 small">
+                    <b>3. Điểm sàn (GPA >= 2.0):</b>
                     <div class="mt-1 p-2 border rounded <?php echo ($gpa >= 2.0) ? 'text-success' : 'text-danger'; ?> fw-bold">
                         <i class="fas <?php echo ($gpa >= 2.0) ? 'fa-check-circle' : 'fa-times-circle'; ?> me-2"></i><?php echo ($gpa >= 2.0) ? "Đạt chuẩn ($gpa)" : "Chưa đạt ($gpa)"; ?>
                     </div>
                 </div>
+                
 
                 <div class="mb-3">
-                    <b class="small">3. Môn điều kiện:</b>
+                    <b class="small">4. Môn điều kiện:</b>
                     <div class="p-2 border rounded bg-light mt-1">
                         <div class="d-flex justify-content-between align-items-center mb-1 small">
-                            <span>Quốc phòng (<?php echo $tc_qp; ?>/8 chỉ, TB: <?php echo $diem_tb_qp; ?>)</span>
+                            <span>Quốc phòng (<?php echo $tc_qp; ?>/8 chỉ, TB: <?php echo $diem_tb_qp; ?>/10</span>
                             <i class="fas <?php echo $check_qp ? 'fa-check text-success' : 'fa-times text-danger'; ?>"></i>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mb-1 small"><span>Thể dục (<?php echo $tc_td; ?>/3 chỉ)</span><i class="fas <?php echo $check_td ? 'fa-check text-success' : 'fa-times text-danger'; ?>"></i></div>
+                        <div class="d-flex justify-content-between align-items-center mb-1 small"><span>Thể chất (<?php echo $tc_td; ?>/3 chỉ)</span><i class="fas <?php echo $check_td ? 'fa-check text-success' : 'fa-times text-danger'; ?>"></i></div>
                         <div class="d-flex justify-content-between align-items-center small"><span>Anh văn (<?php echo $tc_av; ?>/10 chỉ hoặc B1)</span><i class="fas <?php echo $check_av ? 'fa-check text-success' : 'fa-times text-danger'; ?>"></i></div>
                     </div>
                 </div>
@@ -508,30 +566,16 @@ $dat_thuctap = $tong_tc_thuctap >= 120;
                 </div>
         </div>
 
-        <!-- TAB THỰC TẬP -->
-        <div class="tab-pane fade" id="thuctap">
-            <p class="fw-bold mb-1">Tín chỉ tích lũy</p>
-
-            <div class="progress mb-2" style="height: 10px;">
-                <div class="progress-bar bg-primary"
-                     style="width: <?php echo min(100, $tong_tc_thuctap / 120 * 100); ?>%">
-                </div>
-            </div>
-
-            <p class="small mb-2">
-                <?php echo $tong_tc_thuctap; ?> / 120 tín chỉ
-            </p>
-
-            <?php if ($dat_thuctap): ?>
-                <div class="alert alert-success mb-0">
-                    ✅ ĐỦ ĐIỀU KIỆN THỰC TẬP
-                </div>
-            <?php else: ?>
-                <div class="alert alert-warning mb-0">
-                    ⏳ Còn thiếu <?php echo 120 - $tong_tc_thuctap; ?> tín chỉ để được thực tập
-                </div>
-            <?php endif; ?>
-        </div>
+<!-- TAB THỰC TẬP -->
+<div class="tab-pane fade" id="thuctap">
+    <?php
+        renderTinChiBox(
+            $tong_tc_thuctap,
+            120,
+            'Điều kiện thực tập'
+        );
+    ?>
+</div>
 
     </div>
 </div>
@@ -573,6 +617,32 @@ ma.addEventListener("input", () => {
 });
 </script>
 
+<script>
+    const MON_DA_CO = <?php
+        $ds = [];
+        $q = mysqli_query($conn, "SELECT DISTINCT ma_hp FROM bang_diem WHERE mssv='$mssv'");
+        while ($r = mysqli_fetch_assoc($q)) {
+            $ds[] = strtoupper($r['ma_hp']);
+        }
+        echo json_encode($ds);
+    ?>;
+</script>
+<script>
+const form = document.querySelector("form");
+const inputMa = document.querySelector("input[name='ma_hp']");
 
+form.addEventListener("submit", function (e) {
+    const ma = inputMa.value.trim().toUpperCase();
+    if (MON_DA_CO.includes(ma)) {
+        const ok = confirm(
+            "⚠️ Bạn đã thêm môn này rồi.\n\nBạn có chắc chắn muốn thêm lần nữa không?"
+        );
+
+        if (!ok) {
+            e.preventDefault(); // ❌ hủy submit
+        }
+    }
+});
+</script>
 </body>
 </html>
