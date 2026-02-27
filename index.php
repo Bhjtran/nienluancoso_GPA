@@ -230,10 +230,9 @@ function convertDiemSoSangChu($diem4) {
     </div>
 </nav>
 
+
 <div class="container pb-5">
-    <div class="card p-4 mb-4">
-        <h6 class="fw-bold text-primary mb-3"><i class="fas fa-plus-circle me-2"></i>CẬP NHẬT ĐIỂM MỚI</h6>
-        <div class="mb-3">
+    <div class="mb-3">
     <button class="btn btn-outline-primary btn-sm"
             data-bs-toggle="collapse"
             data-bs-target="#importBox">
@@ -263,6 +262,8 @@ function convertDiemSoSangChu($diem4) {
         </form>
     </div>
 </div>
+    <div class="card p-4 mb-4">
+        <h6 class="fw-bold text-primary mb-3"><i class="fas fa-plus-circle me-2"></i>CẬP NHẬT ĐIỂM MỚI</h6>
         
         <form method="POST" class="row g-2">
             <div class="col-md-2"><input type="text" name="ma_hp" class="form-control" placeholder="Mã HP" required></div>
@@ -311,7 +312,6 @@ function convertDiemSoSangChu($diem4) {
             <i class="fas fa-info-circle me-1 text-primary"></i> <strong>Lưu ý:</strong> "Anh văn", "Quốc phòng", "Thể chất" chọn <b>"Điều kiện"</b>. Các môn khác chọn <b>"Chuyên ngành"</b>.
         </div>
     </div>
-
     
 
     <div class="row g-4">
