@@ -27,8 +27,12 @@ if(isset($_POST['btn_update'])){
 
 
 
-    $res_ma = mysqli_query($conn, "SELECT ma_hp FROM bang_diem WHERE id = '$id_edit'");
-    $row_ma = mysqli_fetch_assoc($res_ma);
+$res_ma = mysqli_query($conn, "
+    SELECT ma_hp 
+    FROM bang_diem 
+    WHERE id = '$id_edit' 
+    AND mssv = '$mssv'
+");    $row_ma = mysqli_fetch_assoc($res_ma);
     $ma_hp = $row_ma['ma_hp'];
 
     $diem10_moi = null;
@@ -219,6 +223,7 @@ function convertDiemSoSangChu($diem4) {
             <a href="du_toan.php" class="btn btn-sm btn-primary px-3 shadow-sm" style="border-radius: 20px;">
                 <i class="fas fa-magic me-1"></i> Dự đoán điểm
             </a>
+            <a href="thongke.php">Xem thống kê</a>
         </div>
         
         <div class="d-flex align-items-center">
@@ -243,8 +248,8 @@ function convertDiemSoSangChu($diem4) {
 
 <div class="collapse" id="importBox">
     <div class="border rounded p-3 bg-light">
-        <form method="POST" action="import_file.php" enctype="multipart/form-data">
-            <div class="mb-2 small fw-bold">Chọn file bảng điểm:</div>
+<form id="ocrForm" method="POST" enctype="multipart/form-data">
+                    <div class="mb-2 small fw-bold">Chọn file bảng điểm:</div>
 
             <input type="file"
                    name="bangdiem"
@@ -255,6 +260,7 @@ function convertDiemSoSangChu($diem4) {
             <button class="btn btn-success btn-sm">
                 <i class="fas fa-search me-1"></i> Quét & trích xuất
             </button>
+            <div id="preview"></div>
 
             <div class="small text-muted mt-2">
                 Hỗ trợ: Ảnh, PDF, Excel, Word (không cần đúng định dạng)
@@ -265,8 +271,7 @@ function convertDiemSoSangChu($diem4) {
     <div class="card p-4 mb-4">
         <h6 class="fw-bold text-primary mb-3"><i class="fas fa-plus-circle me-2"></i>CẬP NHẬT ĐIỂM MỚI</h6>
         
-        <form method="POST" class="row g-2">
-            <div class="col-md-2"><input type="text" name="ma_hp" class="form-control" placeholder="Mã HP" required></div>
+        <form method="POST" class="row g-2" id="formAddMon">            <div class="col-md-2"><input type="text" name="ma_hp" class="form-control" placeholder="Mã HP" required></div>
             <div class="col-md-4"><input type="text" name="ten_hp" class="form-control" placeholder="Tên môn học" required></div>
             <div class="col-md-1">
                 <select name="so_tc" class="form-select" required>
@@ -333,13 +338,14 @@ function convertDiemSoSangChu($diem4) {
                         </thead>
                         <tbody>
                             <?php
-                            $res = mysqli_query($conn, "
-                            SELECT b.id, b.ma_hp, b.diem_4, b.diem_10, 
-                                m.ten_hp, m.so_tc, m.loai_hp
-                            FROM bang_diem b
-                            JOIN mon_hoc m ON b.ma_hp = m.ma_hp
-                            WHERE b.mssv = '$mssv'
-                        ");
+$res = mysqli_query($conn, "
+    SELECT b.id, b.ma_hp, b.diem_4, b.diem_10, 
+           m.ten_hp, m.so_tc, m.loai_hp
+    FROM bang_diem b
+    JOIN mon_hoc m ON b.ma_hp = m.ma_hp
+    WHERE b.mssv = '$mssv'
+    ORDER BY b.id ASC
+");
 
                             if(mysqli_num_rows($res) == 0) echo "<tr><td colspan='5' class='text-center py-5 text-muted'>Chưa có dữ liệu.</td></tr>";
                             
@@ -690,7 +696,7 @@ ma.addEventListener("input", () => {
     ?>;
 </script>
 <script>
-const form = document.querySelector("form");
+const form = document.getElementById("formAddMon");
 const inputMa = document.querySelector("input[name='ma_hp']");
 
 form.addEventListener("submit", function (e) {
@@ -706,5 +712,369 @@ form.addEventListener("submit", function (e) {
     }
 });
 </script>
+
+<script>
+document.getElementById("ocrForm").addEventListener("submit", function(e) {
+    e.preventDefault(); // chặn reload
+
+    let formData = new FormData(this);
+
+    fetch("import_file.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+
+let html = `
+<div class="card mt-3 shadow-sm">
+    <div class="card-body">
+        <h6 class="fw-bold text-success mb-3">
+            <i class="fas fa-file-alt me-2"></i> Kết quả quét
+        </h6>
+        <div class="table-responsive">
+<table class="table align-middle">
+<thead>
+<tr>
+    <th class="text-center">Mã HP</th>
+    <th class="text-center">Môn học</th>
+    <th class="text-center">Tín chỉ</th>
+    <th class="text-center">Phân loại</th>
+    <th class="text-center">Hệ 4</th>
+    <th class="text-center">Hệ 10</th>
+    <th class="text-center">Thao tác</th>
+</tr>
+</thead>
+<tbody id="ocrTableBody">
+`;
+
+
+    
+data.forEach((row, index) => {
+
+    let loai = (row.ma_hp.startsWith("XH") ||
+                row.ma_hp.startsWith("QP") ||
+                row.ma_hp.startsWith("TC"))
+                ? "Điều kiện"
+                : "Chuyên ngành";
+
+    html += `
+    <tr id="ocr-row-${index}">
+        <td class="fw-bold text-secondary">${row.ma_hp}</td>
+
+        <td class="fw-bold text-dark">${row.ten_hp}</td>
+
+        <td class="text-center">${row.so_tc}</td>
+
+        <td class="text-center">
+            <span class="badge bg-light text-dark border badge-loai">
+                ${loai}
+            </span>
+        </td>
+
+        <td class="text-center fw-bold">
+            <span class="text-primary" style="font-size:1.2rem">
+                ${convertDiem(row.diem_4)}
+            </span>
+            <span class="text-primary">
+                (${row.diem_4 ?? '-'})
+            </span>
+        </td>
+
+        <td class="text-center fw-bold">
+            ${row.ma_hp.startsWith("QP")
+                ? `<span class="text-success">${row.diem_10 ?? '—'}</span>`
+                : `<span class="text-muted">—</span>`}
+        </td>
+
+        <td class="text-center">
+            <button class="btn btn-sm text-warning"
+                onclick="openEditOCR(${index})">
+                <i class="fas fa-edit"></i>
+            </button>
+
+            <button class="btn btn-sm text-danger"
+                onclick="removeOCR(${index})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+    `;
+});
+
+html += `
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-success mt-2" onclick="saveData()">
+            <i class="fas fa-save me-1"></i> Lưu vào bảng
+        </button>
+    </div>
+</div>
+`;
+
+    
+
+        document.getElementById("preview").innerHTML = html;
+
+        window.ocrData = data; // lưu tạm
+    });
+});
+</script>
+
+<script>
+function saveData() {
+    fetch("save.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(window.ocrData)
+    })
+    .then(res => res.json())
+    .then(res => {
+        alert("Đã lưu thành công!");
+        location.reload();
+    });
+}
+
+function saveEditOCR(index) {
+
+    window.ocrData[index].ten_hp =
+        document.getElementById("editTen").value;
+
+    window.ocrData[index].so_tc =
+        document.getElementById("editTC").value;
+
+    window.ocrData[index].diem_4 =
+        document.getElementById("editD4").value;
+
+    const d10 = document.getElementById("editD10");
+    if (d10) {
+        window.ocrData[index].diem_10 = d10.value;
+    }
+
+    // Đóng modal đúng cách
+const modalEl = document.getElementById("editOCRModal");
+const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+modal.hide();
+
+setTimeout(() => {
+    modalEl.remove();
+}, 300);
+
+    renderOCRTable(); // render lại bảng
+}
+
+function updateOCR(index, field, value) {
+    window.ocrData[index][field] = value;
+}
+function removeOCR(index) {
+
+    const ok = confirm("Bạn có chắc chắn muốn xóa môn này không?");
+    if (!ok) return;
+
+    window.ocrData.splice(index, 1);
+
+    renderOCRTable(); // luôn render lại toàn bảng
+}
+
+function openEditOCR(index) {
+
+const oldModal = document.getElementById("editOCRModal");
+if (oldModal) oldModal.remove();
+    const row = window.ocrData[index];
+
+    let loai = (row.ma_hp.startsWith("XH") ||
+                row.ma_hp.startsWith("QP") ||
+                row.ma_hp.startsWith("TC"))
+                ? "DieuKien"
+                : "ChuyenNganh";
+
+    let modalHTML = `
+    <div class="modal fade" id="editOCRModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:15px;">
+          
+          <div class="modal-header border-0">
+            <h6 class="fw-bold m-0">Chỉnh sửa học phần</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body pt-0">
+
+            <div class="mb-2">
+                <label class="small fw-bold">Tên môn học:</label>
+                <input id="editTen" class="form-control" value="${row.ten_hp}">
+            </div>
+
+            ${row.ma_hp.startsWith("QP") ? `
+            <div class="mb-2">
+                <label class="small fw-bold">Điểm QP (hệ 10):</label>
+                <input id="editD10" type="number" step="0.1"
+                    class="form-control"
+                    value="${row.diem_10 ?? ''}">
+            </div>
+            ` : ''}
+
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="small fw-bold">Số tín chỉ:</label>
+                    <select id="editTC" class="form-select">
+                        ${[1,2,3,4,5,8,10].map(tc =>
+                            `<option value="${tc}" ${row.so_tc==tc?'selected':''}>${tc}</option>`
+                        ).join("")}
+                    </select>
+                </div>
+
+                <div class="col-6">
+                    <label class="small fw-bold">Điểm hệ 4:</label>
+                    <select id="editD4" class="form-select text-primary fw-bold">
+                        ${{
+                            "4.0":"A",
+                            "3.5":"B+",
+                            "3.0":"B",
+                            "2.5":"C+",
+                            "2.0":"C",
+                            "1.5":"D+",
+                            "1.0":"D",
+                            "0":"F"
+                        }}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="small fw-bold">Phân loại:</label>
+                <select id="editLoai" class="form-select" ${row.ma_hp.startsWith("XH")||row.ma_hp.startsWith("QP")||row.ma_hp.startsWith("TC")?'disabled':''}>
+                    <option value="ChuyenNganh" ${loai=="ChuyenNganh"?'selected':''}>Chuyên ngành</option>
+                    <option value="DieuKien" ${loai=="DieuKien"?'selected':''}>Điều kiện</option>
+                </select>
+            </div>
+
+          </div>
+
+          <div class="modal-footer border-0">
+            <button class="btn btn-primary w-100 fw-bold"
+                onclick="saveEditOCR(${index})">
+                LƯU THAY ĐỔI
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    // set điểm hệ 4
+    const diemOptions = {
+        "4.0":"A (4.0)",
+        "3.5":"B+ (3.5)",
+        "3.0":"B (3.0)",
+        "2.5":"C+ (2.5)",
+        "2.0":"C (2.0)",
+        "1.5":"D+ (1.5)",
+        "1.0":"D (1.0)",
+        "0":"F (0)"
+    };
+
+    const select = document.getElementById("editD4");
+    select.innerHTML = Object.entries(diemOptions)
+        .map(([v,label]) =>
+            `<option value="${v}" ${String(row.diem_4) === String(v)?'selected':''}>${label}</option>`
+        ).join("");
+
+    let modal = new bootstrap.Modal(document.getElementById("editOCRModal"));
+    modal.show();
+}
+
+function renderOCRTable() {
+
+    let html = `
+    <div class="card mt-3 shadow-sm">
+        <div class="card-body">
+            <h6 class="fw-bold text-success mb-3">
+                <i class="fas fa-file-alt me-2"></i> Kết quả quét
+            </h6>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Mã HP</th>
+                            <th class="text-center">Môn học</th>
+                            <th class="text-center">Tín chỉ</th>
+                            <th class="text-center">Phân loại</th>
+                            <th class="text-center">Hệ 4</th>
+                            <th class="text-center">Hệ 10</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    window.ocrData.forEach((row, index) => {
+
+        let loai = (row.ma_hp.startsWith("XH") ||
+                    row.ma_hp.startsWith("QP") ||
+                    row.ma_hp.startsWith("TC"))
+                    ? "Điều kiện"
+                    : "Chuyên ngành";
+
+        html += `
+        <tr>
+            <td class="fw-bold text-secondary">${row.ma_hp}</td>
+            <td class="fw-bold text-dark">${row.ten_hp}</td>
+            <td class="text-center">${row.so_tc}</td>
+            <td class="text-center">
+                <span class="badge bg-light text-dark border badge-loai">${loai}</span>
+            </td>
+            <td class="text-center fw-bold text-primary">
+${convertDiem(parseFloat(row.diem_4 || 0))} (${row.diem_4 ?? '-'})            </td>
+            <td class="text-center fw-bold">
+                ${row.ma_hp.startsWith("QP") ? row.diem_10 ?? '—' : '—'}
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm text-warning" onclick="openEditOCR(${index})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm text-danger" onclick="removeOCR(${index})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-success mt-2" onclick="saveData()">
+                <i class="fas fa-save me-1"></i> Lưu vào bảng
+            </button>
+        </div>
+    </div>
+    `;
+
+    document.getElementById("preview").innerHTML = html;
+}
+
+</script>
+
+<script>
+function convertDiem(d4){
+    d4 = parseFloat(d4);
+
+    if(d4 >= 4.0) return "A";
+    if(d4 >= 3.5) return "B+";
+    if(d4 >= 3.0) return "B";
+    if(d4 >= 2.5) return "C+";
+    if(d4 >= 2.0) return "C";
+    if(d4 >= 1.5) return "D+";
+    if(d4 >= 1.0) return "D";
+    return "F";
+}
+</script>
+
 </body>
 </html>
