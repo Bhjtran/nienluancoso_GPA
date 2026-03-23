@@ -3,7 +3,7 @@ session_start();
 include 'config.php';
 $mssv = $_SESSION['mssv'];
 
-
+$current_page = 'du_toan';
 $sql = "SELECT b.id, m.so_tc, b.diem_4, m.ten_hp FROM bang_diem b
         JOIN mon_hoc m ON b.ma_hp = m.ma_hp WHERE b.mssv = '$mssv' AND m.loai_hp != 'DieuKien'";
 $res = mysqli_query($conn, $sql);
@@ -27,12 +27,18 @@ $gpa_ht = number_format($gpa_ht_raw, 2);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dự toán chiến thuật</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --ctu-blue: #0d6efd; --ctu-dark: #1e293b; --bg: #f8fafc; }
-        body { background-color: var(--bg); font-family: 'Inter', sans-serif; color: #334155; }
+        body { 
+    background-color: #f8f9fa; 
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    color: #334155; 
+}
        
         .navbar-custom { background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 0; }
         .btn-back { color: #64748b; text-decoration: none; font-weight: 500; font-size: 0.85rem; padding: 8px 12px; border-radius: 8px; }
@@ -77,20 +83,75 @@ $gpa_ht = number_format($gpa_ht_raw, 2);
             font-size: 0.9rem;
         }
     </style>
+
+    <style>
+    /* Style cơ bản cho các mục menu */
+    .custom-nav-item {
+        color: #6c757d !important; /* Màu xám cho các trang không chọn */
+        font-weight: 500;
+        font-size: 0.95rem;
+        padding: 8px 20px !important; /* Tạo độ rộng cho nút */
+        transition: all 0.3s ease;
+        border-radius: 50px; /* Bo tròn hoàn toàn giống trong ảnh */
+        text-decoration: none;
+    }
+
+    /* Hiệu ứng khi di chuột vào (Hover) */
+    .custom-nav-item:hover {
+        color: #0d6efd !important;
+        background-color: #f8f9fa;
+    }
+
+    /* TRANG ĐANG CHỌN (ACTIVE) - Giống hệt ảnh mẫu */
+.custom-nav-item.active {
+        background-color: #4e73df !important; /* Màu xanh đậm */
+        color: white !important; /* Chữ trắng */
+        border-radius: 50px;
+        font-weight: bold;
+    }
+</style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <body>
 
-
-<nav class="navbar-custom mb-4">
+<nav class="navbar navbar-expand-lg sticky-top bg-white mb-4 shadow-sm py-2">
     <div class="container d-flex justify-content-between align-items-center">
+        
         <div class="d-flex align-items-center">
-            <i class="fas fa-chart-line fa-lg text-primary me-2"></i>
-            <h5 class="mb-0 fw-bold" style="color: var(--ctu-dark);">PHÂN TÍCH CHIẾN THUẬT</h5>
+            <a class="navbar-brand d-flex align-items-center me-4" href="index.php">
+                <h4 class="text-primary fw-bold m-0">
+                    <i class="fas fa-graduation-cap me-2"></i>CTU SCORE
+                </h4>
+            </a>
+
+            <div class="d-flex align-items-center">
+                <a href="index.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'trang_chu') ? 'active' : ''; ?>">
+                    Trang chủ
+                </a>
+                
+                <a href="thongke.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'thong_ke') ? 'active' : ''; ?>">
+                    Thống kê
+                </a>
+
+                <a href="du_toan.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'du_toan') ? 'active' : ''; ?>">
+                    Dự đoán điểm
+                </a>
+            </div>
         </div>
-        <a href="index.php" class="btn-back"><i class="fas fa-arrow-left me-2"></i>Trở về Bảng điểm</a>
+
+        <div class="d-flex align-items-center">
+            <div class="vr mx-3 d-none d-md-block" style="height: 24px; opacity: 0.15;"></div>
+
+            <span class="fw-bold me-3 text-dark d-none d-md-inline-block" style="font-size: 0.9rem;">
+                <i class="fas fa-user-circle me-1 text-secondary"></i> <?php echo $mssv; ?>
+            </span>
+
+            <a href="login.php" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" style="font-size: 0.8rem;">
+                Thoát
+            </a>
+        </div>
     </div>
 </nav>
 
@@ -168,7 +229,7 @@ $gpa_ht = number_format($gpa_ht_raw, 2);
 
             <!-- BẢNG DUY TRÌ -->
             <div class="card-custom overflow-hidden mb-4">
-                <div class="p-3 fw-bold">🔵 Kịch bản DUY TRÌ (không cải thiện)</div>
+                <div class="p-3 fw-bold">🔵 Kịch bản KHÔNG CẢI THIỆN</div>
                 <table class="table mb-0">
                     <thead class="table-light">
                     <tr>
@@ -588,4 +649,3 @@ async function exportPDF() {
 
 </body>
 </html>
-

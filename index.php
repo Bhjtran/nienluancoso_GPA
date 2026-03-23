@@ -182,6 +182,25 @@ function convertDiemSoSangChu($diem4) {
 }
 ?>
 
+<?php
+// Lấy tên file hiện tại (ví dụ: index.php, thongke.php)
+$self = basename($_SERVER['PHP_SELF']);
+
+switch ($self) {
+    case 'index.php':
+        $current_page = 'trang_chu';
+        break;
+    case 'thongke.php':
+        $current_page = 'thong_ke';
+        break;
+    case 'du_toan.php':
+        $current_page = 'du_toan';
+        break;
+    default:
+        $current_page = ''; 
+}
+?>
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -211,26 +230,70 @@ function convertDiemSoSangChu($diem4) {
             animation: flashRow 1.2s ease-in-out 3;
         }
     </style>
+<style>
+    /* Style cơ bản cho các mục menu */
+    .custom-nav-item {
+        color: #6c757d !important; /* Màu xám cho các trang không chọn */
+        font-weight: 500;
+        font-size: 0.95rem;
+        padding: 8px 20px !important; /* Tạo độ rộng cho nút */
+        transition: all 0.3s ease;
+        border-radius: 50px; /* Bo tròn hoàn toàn giống trong ảnh */
+        text-decoration: none;
+    }
+
+    /* Hiệu ứng khi di chuột vào (Hover) */
+    .custom-nav-item:hover {
+        color: #0d6efd !important;
+        background-color: #f8f9fa;
+    }
+
+    /* TRANG ĐANG CHỌN (ACTIVE) - Giống hệt ảnh mẫu */
+.custom-nav-item.active {
+        background-color: #4e73df !important; /* Màu xanh đậm */
+        color: white !important; /* Chữ trắng */
+        border-radius: 50px;
+        font-weight: bold;
+    }
+</style>
 </head>
 <body>
 
-<nav class="navbar mb-4 shadow-sm">
+<nav class="navbar navbar-expand-lg sticky-top bg-white mb-4 shadow-sm py-2">
     <div class="container d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <h4 class="text-primary fw-bold m-0 me-3">
-                <i class="fas fa-graduation-cap me-2"></i>CTU SCORE
-            </h4>
-            <a href="du_toan.php" class="btn btn-sm btn-primary px-3 shadow-sm" style="border-radius: 20px;">
-                <i class="fas fa-magic me-1"></i> Dự đoán điểm
-            </a>
-            <a href="thongke.php">Xem thống kê</a>
-        </div>
         
         <div class="d-flex align-items-center">
-            <span class="fw-bold me-3 text-dark d-none d-md-inline">
-                <i class="fas fa-user-circle me-1"></i> <?php echo $mssv; ?>
+            <a class="navbar-brand d-flex align-items-center me-4" href="index.php">
+                <h4 class="text-primary fw-bold m-0">
+                    <i class="fas fa-graduation-cap me-2"></i>CTU SCORE
+                </h4>
+            </a>
+
+            <div class="d-flex align-items-center">
+                <a href="index.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'trang_chu') ? 'active' : ''; ?>">
+                    Trang chủ
+                </a>
+                
+                <a href="thongke.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'thong_ke') ? 'active' : ''; ?>">
+                    Thống kê
+                </a>
+
+                <a href="du_toan.php" class="nav-link px-3 custom-nav-item <?php echo ($current_page == 'du_toan') ? 'active' : ''; ?>">
+                    Dự đoán điểm
+                </a>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <div class="vr mx-3 d-none d-md-block" style="height: 24px; opacity: 0.15;"></div>
+
+            <span class="fw-bold me-3 text-dark d-none d-md-inline-block" style="font-size: 0.9rem;">
+                <i class="fas fa-user-circle me-1 text-secondary"></i> <?php echo $mssv; ?>
             </span>
-            <a href="login.php" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 20px;">Thoát</a>
+
+            <a href="login.php" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" style="font-size: 0.8rem;">
+                Thoát
+            </a>
         </div>
     </div>
 </nav>
@@ -263,7 +326,7 @@ function convertDiemSoSangChu($diem4) {
             <div id="preview"></div>
 
             <div class="small text-muted mt-2">
-                Hỗ trợ: Ảnh, PDF, Excel, Word (không cần đúng định dạng)
+                Hỗ trợ: Ảnh, Excel
             </div>
         </form>
     </div>
